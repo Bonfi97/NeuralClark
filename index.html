@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+    <header>
+        <title>NeuralClark: Gotta find 'em all!</title>
+        <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+        <style>
+            body {
+                color: #eee;
+                background: #121212;
+            }
+            .container {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .break {
+                flex-basis: 100%;
+                height: 15px;
+            }
+            .smallBreak {
+                flex-basis: 100%;
+                height: 0;
+            }
+            .item {
+                width: 80vh;
+            }
+        </style>
+        
+    </header>
+    <body>
+        <div class="container">
+            <canvas id="canvas" width=256 height=256 class="item" ></canvas>
+            <div class="break"></div>
+            <input type="range" min="0" max="1" value="0" step="0.01" class="item" id="range1" onchange="redraw()">
+            <div class="break"></div>
+            <input type="range" min="0" max="1" value="0" step="0.01" class="item" id="range2" onchange="redraw()">
+            <div class="break"></div>
+            <input type="range" min="0" max="1" value="0" step="0.01" class="item" id="range3" onchange="redraw()">
+            <div class="smallBreak"></div>
+            <h2>NeuralClark: Gotta find 'em all!</h2>
+            <div class="smallBreak"></div>
+            <p>Try to find all the 8 secrets!</p>
+            <div class="break"></div>
+            <input type="checkbox" id="easyMode" onchange="easyModeToggle()">
+            <label for="subscribeNews">Enable EasyMode</label>
+        </div>
+        <datalist id="markers">
+            <option value="0"></option>
+            <option value="0.5"></option>
+            <option value="1"></option>
+        </datalist>
+        <script>
+            var session;
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+            const range1 = document.getElementById("range1");
+            const range2 = document.getElementById("range2");
+            const range3 = document.getElementById("range3");
+            const mode = document.getElementById("easyMode");
+            
+            async function setup() {
+                session = await ort.InferenceSession.create('./network.onnx');
+            }
+            
+            async function redraw() {
+                    const data = Float32Array.from([range1.value,range2.value,range3.value]);
+                    const tensor = new ort.Tensor('float32', data, [1, 3]);
+
+                    const results = await session.run({ input: tensor});
+
+                    const image = results.output.toImageData({format:"RGB",norm:{bias: -1.0, mean: 127.5}});
+                    ctx.putImageData(image, 0, 0);
+            }
+            
+            function easyModeToggle() {
+                if (mode.checked) {
+                    range1.step = 0.5;
+                    range2.step = 0.5;
+                    range3.step = 0.5;
+                    range1.setAttribute("list", "markers");
+                    range2.setAttribute("list", "markers");
+                    range3.setAttribute("list", "markers");
+                } else {
+                    range1.step = 0.01;
+                    range2.step = 0.01;
+                    range3.step = 0.01;
+                    range1.removeAttribute("list");
+                    range2.removeAttribute("list");
+                    range3.removeAttribute("list");
+                }
+            }
+            
+            setup().then(redraw)
+        </script>
+    </body>
+</html>
